@@ -36,16 +36,36 @@ local function findTools(player,petId)
  return result
 end
 local function applyScale(tool,scale)
- -- Prefer a Model inside the Tool so Model:ScaleTo scales parts and joints together.
+ scale=math.clamp(tonumber(scale) or 1,0.2,2.5)
  local model=tool:FindFirstChildWhichIsA("Model",true)
  if model then
   local ok,err=pcall(function() model:ScaleTo(scale) end)
   if not ok then warn("[PetToolServer] Model scaling failed:",err) end
   return
  end
- -- A Tool without a Model cannot be safely resized as a group; keep its authored geometry.
- warn("[PetToolServer] Tool has no Model descendant; kept template geometry. Add a Model around the pet mesh to enable saved sizing.")
+ -- Current pet Tool templates use a Handle plus welded parts, not a Model.
+ -- Scale the complete assembly around the Handle so the pet's silhouette and
+ -- relative part positions are preserved without changing the Tool hierarchy.
+ local handle=tool:FindFirstChild("Handle")
+ if not handle or not handle:IsA("BasePart") then
+  warn("[PetToolServer] Tool has no Handle; cannot apply saved scale:",tool.Name)
+  return
+ end
+ local pivot=handle.CFrame
+ for _,part in ipairs(tool:GetDescendants()) do
+  if part:IsA("BasePart") then
+   local relative=pivot:ToObjectSpace(part.CFrame)
+   part.Size=part.Size*scale
+   part.CFrame=pivot*CFrame.new(relative.Position*scale)*(relative-relative.Position)
+  elseif part:IsA("SpecialMesh") then
+   part.Scale=part.Scale*scale
+  elseif part:IsA("Weld") or part:IsA("Motor6D") then
+   part.C0=CFrame.new(part.C0.Position*scale)*(part.C0-part.C0.Position)
+   part.C1=CFrame.new(part.C1.Position*scale)*(part.C1-part.C1.Position)
+  end
+ end
 end
+
 equipEvent.OnServerEvent:Connect(function(player,petId)
  if typeof(petId)~="string" or #petId>64 or not allowed(player,"equip") then return end
  local records=player:FindFirstChild("PetRecords")
