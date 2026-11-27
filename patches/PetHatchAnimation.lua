@@ -434,7 +434,7 @@ local function playEggBurst(egg: Model, ctx, rarity: string, temp: { Instance })
 end
 
 -- PART 2: the pet grows out of the egg and its rarity is revealed.
-local function playPetReveal(ctx, petName: string, rarity: string, temp: { Instance })
+local function playPetReveal(ctx, petName: string, rarity: string, temp: { Instance }, petScale: number)
 	local template = PetConfig.FindPet(petName)
 	if not template then
 		warn("[PetHatch] No pet model named", petName, "in ReplicatedStorage.World1.Pets")
@@ -496,7 +496,7 @@ local function playPetReveal(ctx, petName: string, rarity: string, temp: { Insta
 
 	local naturalMax = math.max(boxSize.X, boxSize.Y, boxSize.Z, 0.1)
 	local targetMax = math.max(eggSize.Y * 0.9, 2.5)
-	local targetMult = targetMax / naturalMax
+	local targetMult = (targetMax / naturalMax) * math.clamp(petScale or 1, 0.2, 2.5)
 	local petHeight = boxSize.Y * targetMult
 
 	local function applyMult(mult: number, lift: number, sway: CFrame)
@@ -571,7 +571,7 @@ local function playPetReveal(ctx, petName: string, rarity: string, temp: { Insta
 	growConnection:Disconnect()
 end
 
-hatchedEvent.OnClientEvent:Connect(function(egg, petName, rarity, ownerUserId)
+hatchedEvent.OnClientEvent:Connect(function(egg, petName, rarity, ownerUserId, petScale, sizeTier)
 	if typeof(egg) ~= "Instance" or not egg:IsA("Model") then
 		return
 	end
@@ -605,7 +605,7 @@ hatchedEvent.OnClientEvent:Connect(function(egg, petName, rarity, ownerUserId)
 			task.delay(0.8, showToast, petName, displayName, rarity, color)
 		end
 
-		local okPet, petError = pcall(playPetReveal, ctx, petName, rarity, temp)
+		local okPet, petError = pcall(playPetReveal, ctx, petName, rarity, temp, tonumber(petScale) or 1)
 		if not okPet then
 			warn("[PetHatch] pet reveal error:", petError)
 		end
