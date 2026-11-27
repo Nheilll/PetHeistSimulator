@@ -1,0 +1,20 @@
+--- a/StarterPlayer/StarterPlayerScripts/PetHatchAnimation.lua
++++ b/StarterPlayer/StarterPlayerScripts/PetHatchAnimation.lua
+@@
+ local grantToolEvent = remotes:WaitForChild("GrantPetTool") :: RemoteEvent
++local hatchAnimDoneEvent = remotes:WaitForChild("HatchAnimationDone") :: RemoteEvent
+@@
+ 		if ownerUserId == player.UserId then
+ 			grantToolEvent:FireServer(petName)
++			hatchAnimDoneEvent:FireServer(egg)
+ 		end
+
+ 		activeHatch[egg] = nil
+
+--- a/ServerScriptService/EggServerScripts/PetHatchServer.lua
++++ b/ServerScriptService/EggServerScripts/PetHatchServer.lua
+@@
+-local ANIMATION_TIMEOUT = 6.5
++local ANIMATION_TIMEOUT = 15
+
+Note: These are targeted source edits, not a complete rewrite. The timeout is only a failsafe; the owner client now explicitly signals completion after the reveal sequence.
