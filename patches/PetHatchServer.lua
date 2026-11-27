@@ -136,9 +136,10 @@ local function saveProfile(player,p)
  if not ok then p.Dirty=true; warn("[PetHatch] Save failed:",player.UserId,err) end
  return ok
 end
-local function awardPet(player,petName,rarity)
+local function awardPet(player,petName,rarity,scale,tier)
  local p=profiles[player]; if not p or not p.CanSave or player:GetAttribute("PetsLoaded")~=true then return nil end
- local scale,tier=PetConfig.RollPetScale()
+ scale=math.clamp(tonumber(scale) or PetConfig.SizeRange.Default,PetConfig.SizeRange.Min,PetConfig.SizeRange.Max)
+ tier=typeof(tier)=="string" and tier or "Normal"
  local record={PetId=HttpService:GenerateGUID(false),PetName=petName,Rarity=rarity,PetScale=scale,SizeTier=tier,Mutation="None",CreatedAt=os.time()}
  table.insert(p.PetRecords,record); p.Dirty=true
  syncAll(player,p)
@@ -176,7 +177,7 @@ local function finish(egg)
   local deadline=os.clock()+12
   while owner.Parent==Players and owner:GetAttribute("PetsLoaded")~=true and os.clock()<deadline do task.wait(.1) end
   if owner.Parent==Players then
-   local record=awardPet(owner,d.PetName,d.Rarity)
+   local record=awardPet(owner,d.PetName,d.Rarity,d.PetScale,d.SizeTier)
    if record then
     -- A hatch begins in the Pet Bag. The player equips it from the custom inventory.
     d.PetId=record.PetId
@@ -191,9 +192,10 @@ local function hatchEgg(egg)
  if not name or not rarity then return end
  local ownerId=egg:GetAttribute("PlacedByUserId")
  if typeof(ownerId)~="number" or ownerId<=0 or not Players:GetPlayerByUserId(ownerId) then return end
- pending[egg]={PetName=name,Rarity=rarity,OwnerId=ownerId,Done=false}
+ local scale,tier=PetConfig.RollPetScale()
+ pending[egg]={PetName=name,Rarity=rarity,OwnerId=ownerId,PetScale=scale,SizeTier=tier,Done=false}
  egg:SetAttribute("Hatched",true)
- petHatchedEvent:FireAllClients(egg,name,rarity,ownerId)
+ petHatchedEvent:FireAllClients(egg,name,rarity,ownerId,scale,tier)
  task.delay(ANIMATION_TIMEOUT,function() finish(egg) end)
 end
 hatchDoneEvent.OnServerEvent:Connect(function(player,egg)
